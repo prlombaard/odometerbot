@@ -20,6 +20,7 @@ bot.
 """
 
 import datetime
+import logging
 import os
 import sys
 import time
@@ -27,10 +28,9 @@ from collections import OrderedDict
 
 # DONE: Add colored logging
 import coloredlogs
-import logging
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-_VERSION_ = "Version 1.3"
+_BOT_VERSION_ = "Version 1.4"
 
 _BOT_START_DATETIME_ = datetime.datetime.now()
 _BOT_START_TIME_ = time.time()
@@ -39,6 +39,8 @@ _BOT_NAME_ = "Timerbot"
 
 _SENT_MESSAGES_ = 0
 _RECEIVED_MESSAGES_ = 0
+
+_BOT_SHUTDOWN_DURATION = 3
 
 # TODO: Add status command handler and callback to display bot status
 # TODO: Add os_status command handler and callback to diplay os status in which the bot app is running
@@ -94,7 +96,6 @@ def voice_handler(bot, update):
 
 
 def document_handler(bot, update):
-    import os, sys
     logger.info("handler:document_handler:start")
     logger.debug("Getting file descriptor")
     file_id = update.message.document.file_id
@@ -117,10 +118,26 @@ def document_handler(bot, update):
     logger.info("handler:document_handler:end")
 
 
+def shutdown_command(bot, update):
+    import time
+    import os
+    logger.info("command:shutdown:start")
+    logger.info("Received shutdown command from Telegram chat, going to try and shut down gracefully")
+    update.message.reply_text("Shutdown command received")
+    update.message.reply_text(f"OK, I'm shutting down in {_BOT_SHUTDOWN_DURATION} seconds")
+    logger.info(f"Shutting down (killing this script in {_BOT_SHUTDOWN_DURATION} seconds")
+    time.sleep(_BOT_SHUTDOWN_DURATION)
+    logger.info("BYE!!")
+    update.message.reply_text("BYE!!")
+
+    os.kill(os.getpid(), 9)  # 9 means SIGKILL
+    logger.info("command:shutdown:end")
+
+
 def status_command(bot, update):
     logger.info("command:status:start")
     update.message.reply_text("Here is my status:")
-    update.message.reply_text(f"Hi!, i'm {sys.modules[__name__]} {_VERSION_}")
+    update.message.reply_text(f"Hi!, i'm {sys.modules[__name__]} {_BOT_VERSION_}")
     update.message.reply_text(f"I was started at absolute_time({_BOT_START_TIME_})")
     update.message.reply_text(
         f"I was started at {_BOT_START_DATETIME_}")  # DONE: Move this info to advanced status command handler
@@ -188,7 +205,7 @@ def help_command(bot, update):
 # update. Error handlers also receive the raised TelegramError object in error.
 def start_command(bot, update):
     logger.info("command:start")
-    update.message.reply_text(f"Hi!, i'm {_BOT_NAME_} {_VERSION_}")
+    update.message.reply_text(f"Hi!, i'm {_BOT_NAME_} {_BOT_VERSION_}")
     # DONE: Add version number
     update.message.reply_text(f"I was started at {_BOT_START_DATETIME_}")
     update.message.reply_text('Use /help to display bot commands')
@@ -284,6 +301,7 @@ def main():
     dp.add_handler(CommandHandler("start", start_command))
     dp.add_handler(CommandHandler("help", help_command))
     dp.add_handler(CommandHandler("status", status_command))
+    dp.add_handler(CommandHandler("shutdown", shutdown_command))
     dp.add_handler(CommandHandler("host_status", host_status_command))
     dp.add_handler(CommandHandler("set", set_timer,
                                   pass_args=True,
@@ -299,7 +317,8 @@ def main():
     dp.add_error_handler(error)
 
     logger.info("Starting the Bot")
-    logger.info(f"This is {_VERSION_}")  # DONE: Add version number from this module, DO NOT hardcode into strings!!!
+    logger.info(
+        f"This is {_BOT_VERSION_}")  # DONE: Add version number from this module, DO NOT hardcode into strings!!!
     logger.info("This bot can be updated OTA with Telegram")
 
     # Start the Bot

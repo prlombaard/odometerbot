@@ -2,7 +2,7 @@ import pytest
 
 import timerbot
 
-_TEST_VERSION_ = "Version 1.3"  # This version goes together with the timerbot.py version they should be the same
+_TEST_VERSION_ = "Version 1.4"  # This version goes together with the timerbot.py version they should be the same
 
 
 def test_timerbot_main_without_token_parameter_expect_exception():
@@ -11,7 +11,7 @@ def test_timerbot_main_without_token_parameter_expect_exception():
 
 
 def test_timerbot_version():
-    assert timerbot._VERSION_ == _TEST_VERSION_, "Check the timerbot.py version number should be the same as this test file"
+    assert timerbot._BOT_VERSION_ == _TEST_VERSION_, "Check the timerbot.py version number should be the same as this test file"
 
 
 def test_bot_started_datetime():

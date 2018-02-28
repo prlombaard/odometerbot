@@ -30,7 +30,7 @@ import coloredlogs
 import logging
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-_VERSION_ = "Version 1.1"
+_VERSION_ = "Version 1.2"
 
 _BOT_START_DATETIME_ = datetime.datetime.now()
 _BOT_START_TIME_ = time.time()
@@ -57,7 +57,7 @@ coloredlogs.install(level='DEBUG')
 # messages originating from that logger will show up on the terminal.
 coloredlogs.install(level='DEBUG', logger=logger)
 
-# Some examples.
+# Some examples from coloredlogs
 logger.debug("this is a debugging message")
 logger.info("this is an informational message")
 logger.warning("this is a warning message")
@@ -89,7 +89,7 @@ def voice_handler(bot, update):
     logger.info("file_id" + str(update.message.voice.file_id))
     filename = 'voice.ogg'
     file.download(filename)
-    logger.info(f'Voice message sucessfully saved to disk with filename {filename}')
+    logger.info(f'Voice message successfully saved to disk with filename {filename}')
     logger.info("handler:voice_handler:end")
 
 
@@ -105,7 +105,7 @@ def document_handler(bot, update):
     # TODO: Make a backup of this bot's code before saving (overwriting python file)
     filename = file_name
     file.download(filename)
-    logger.info(f'Document sucessfully saved to disk with filename {filename}')
+    logger.info(f'Document successfully saved to disk with filename {filename}')
 
     logger.warning("new code received, re-spawning this code")
     # TODO: Check file name
@@ -118,7 +118,7 @@ def document_handler(bot, update):
 
 
 def status_command(bot, update):
-    logging.info("command:status:start")
+    logger.info("command:status:start")
     update.message.reply_text("Here is my status:")
     update.message.reply_text(f"Hi!, i'm {sys.modules[__name__]} {_VERSION_}")
     update.message.reply_text(f"I was started at absolute_time({_BOT_START_TIME_})")
@@ -132,7 +132,7 @@ def status_command(bot, update):
         update.message.reply_text(f"I've sent {_RECEIVED_MESSAGES_} messages")
     else:
         update.message.reply_text(f"I've sent no messages")
-    logging.info("command:status:end")
+    logger.info("command:status:end")
 
 
 def meminfo():
@@ -149,13 +149,13 @@ def meminfo():
 def host_status_command(bot, update):
     import platform
 
-    logging.info("command:host_status:start")
+    logger.info("command:host_status:start")
     update.message.reply_text("Here is my host status:")
     update.message.reply_text(f"platform.uname:{platform.uname()}")
     update.message.reply_text(f"platform.system:{platform.system()}")
     update.message.reply_text(f"platform.architecture(){platform.architecture()}")
     if platform.system() == 'Linux':
-        logging.info("status:Linux platform")
+        logger.info("status:Linux platform")
         update.message.reply_text(f"platform.linux_distribution:{platform.linux_distribution()}")
 
         # Display processing units models
@@ -167,20 +167,21 @@ def host_status_command(bot, update):
                     if line.rstrip('\n').startswith('model name'):
                         model_name = line.rstrip('\n').split(':')[1]
                         update.message.reply_text(f"{model_name}")
-        meminfo = meminfo()
-        update.message.reply_text(f"Total memory: {meminfo['MemTotal']}")
-        update.message.reply_text(f"Free memory: {meminfo['MemFree']}")
+        memory_info = meminfo()
+        update.message.reply_text(f"Total memory: {memory_info['MemTotal']}")
+        update.message.reply_text(f"Free memory: {memory_info['MemFree']}")
     else:
-        logging.info("status:Windows platform")
-    logging.info("command:host_status:end")
+        logger.info("status:Windows platform")
+    logger.info("command:host_status:end")
 
 
 def help_command(bot, update):
-    logger.info("command:help")
+    logger.info("command:help:start")
     update.message.reply_text('Use /set <seconds> to set a timer')
     update.message.reply_text('Use /unsetall to unset all timers')
     update.message.reply_text('Use /list to list all timers. Not working, only showing last created timer')
     update.message.reply_text('Use /respawn to re-spawn the bot. ie. reload the bot''s code')
+    logger.info("command:help:end")
 
 
 # Define a few command handlers. These usually take the two arguments bot and
@@ -268,7 +269,7 @@ def main():
     """Run bot."""
     logger.info("Setting up Telegram bot")
     logger.info(f'Bot started at datetime({_BOT_START_DATETIME_})')
-    logger.info(f'Bot started at absolute time({_BOT_START_DATETIME_})')
+    logger.info(f'Bot started at absolute time({_BOT_START_TIME_})')
     import sys
     if len(sys.argv) == 1:
         raise EnvironmentError("Telegram Authentication Token not found in environment variable argv[1]")

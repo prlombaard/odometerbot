@@ -19,34 +19,192 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 
+import datetime
+import os
+import sys
+import time
+from collections import OrderedDict
+
+# DONE: Add colored logging
+import coloredlogs
 import logging
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-from telegram.ext import Updater, CommandHandler
+_VERSION_ = "Version 1.1"
 
-# Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.DEBUG)
+_BOT_START_DATETIME_ = datetime.datetime.now()
+_BOT_START_TIME_ = time.time()
 
+_BOT_NAME_ = "Timerbot"
+
+_SENT_MESSAGES_ = 0
+_RECEIVED_MESSAGES_ = 0
+
+# TODO: Add status command handler and callback to display bot status
+# TODO: Add os_status command handler and callback to diplay os status in which the bot app is running
+
+
+# Create a logger object.
 logger = logging.getLogger(__name__)
+
+# By default the install() function installs a handler on the root logger,
+# this means that log messages from your code and log messages from the
+# libraries that you use will all show up on the terminal.
+coloredlogs.install(level='DEBUG')
+
+# If you don't want to see log messages from libraries, you can pass a
+# specific logger object to the install() function. In this case only log
+# messages originating from that logger will show up on the terminal.
+coloredlogs.install(level='DEBUG', logger=logger)
+
+# Some examples.
+logger.debug("this is a debugging message")
+logger.info("this is an informational message")
+logger.warning("this is a warning message")
+logger.error("this is an error message")
+logger.critical("this is a critical message")
+
+
+def respawn():
+    # From https://stackoverflow.com/questions/31447442/difference-between-os-execl-and-os-execv-in-python
+    logger.info("Script is going to re-spawn")
+    args = sys.argv[:]
+    args.insert(0, sys.executable)
+    if sys.platform == 'win32':
+        args = ['"%s"' % arg for arg in args]
+    os.execv(sys.executable, args)
+    logger.warning("You should not see this message")
+
+
+def respawn_handler(bot, update):
+    logger.info("handler:respawn_handler:start")
+    respawn()
+    logger.info("handler:respawn_handler:end")
+
+
+def voice_handler(bot, update):
+    logger.info("handler:voice_handler:start")
+    logger.debug("Getting file descriptor")
+    file = bot.getFile(update.message.voice.file_id)
+    logger.info("file_id" + str(update.message.voice.file_id))
+    filename = 'voice.ogg'
+    file.download(filename)
+    logger.info(f'Voice message sucessfully saved to disk with filename {filename}')
+    logger.info("handler:voice_handler:end")
+
+
+def document_handler(bot, update):
+    import os, sys
+    logger.info("handler:document_handler:start")
+    logger.debug("Getting file descriptor")
+    file_id = update.message.document.file_id
+    file_name = update.message.document.file_name
+    file = bot.getFile(file_id)
+    logger.info("file_id: " + str(file_id))
+    logger.info("file_name: " + str(file_name))
+    # TODO: Make a backup of this bot's code before saving (overwriting python file)
+    filename = file_name
+    file.download(filename)
+    logger.info(f'Document sucessfully saved to disk with filename {filename}')
+
+    logger.warning("new code received, re-spawning this code")
+    # TODO: Check file name
+    # TODO: Include some kind of password protection
+    # TODO: First check that downloaded code is working before restarting the bot
+    # re-spawn bot if correct file
+    update.message.reply_text("Bot have received new code, re-spawning, check if I still live using /start")
+    respawn()
+    logger.info("handler:document_handler:end")
+
+
+def status_command(bot, update):
+    logging.info("command:status:start")
+    update.message.reply_text("Here is my status:")
+    update.message.reply_text(f"Hi!, i'm {sys.modules[__name__]} {_VERSION_}")
+    update.message.reply_text(f"I was started at absolute_time({_BOT_START_TIME_})")
+    update.message.reply_text(
+        f"I was started at {_BOT_START_DATETIME_}")  # DONE: Move this info to advanced status command handler
+    if _SENT_MESSAGES_:
+        update.message.reply_text(f"I've received {_SENT_MESSAGES_} messages")
+    else:
+        update.message.reply_text(f"I've received no messages")
+    if _SENT_MESSAGES_:
+        update.message.reply_text(f"I've sent {_RECEIVED_MESSAGES_} messages")
+    else:
+        update.message.reply_text(f"I've sent no messages")
+    logging.info("command:status:end")
+
+
+def meminfo():
+    """ Return the information in /proc/meminfo
+    as a dictionary """
+    meminfo = OrderedDict()
+
+    with open('/proc/meminfo') as f:
+        for line in f:
+            meminfo[line.split(':')[0]] = line.split(':')[1].strip()
+    return meminfo
+
+
+def host_status_command(bot, update):
+    import platform
+
+    logging.info("command:host_status:start")
+    update.message.reply_text("Here is my host status:")
+    update.message.reply_text(f"platform.uname:{platform.uname()}")
+    update.message.reply_text(f"platform.system:{platform.system()}")
+    update.message.reply_text(f"platform.architecture(){platform.architecture()}")
+    if platform.system() == 'Linux':
+        logging.info("status:Linux platform")
+        update.message.reply_text(f"platform.linux_distribution:{platform.linux_distribution()}")
+
+        # Display processing units models
+        with open('/proc/cpuinfo') as f:
+            for line in f:
+                # Ignore the blank line separating the information between
+                # details about two processing units
+                if line.strip():
+                    if line.rstrip('\n').startswith('model name'):
+                        model_name = line.rstrip('\n').split(':')[1]
+                        update.message.reply_text(f"{model_name}")
+        meminfo = meminfo()
+        update.message.reply_text(f"Total memory: {meminfo['MemTotal']}")
+        update.message.reply_text(f"Free memory: {meminfo['MemFree']}")
+    else:
+        logging.info("status:Windows platform")
+    logging.info("command:host_status:end")
+
+
+def help_command(bot, update):
+    logger.info("command:help")
+    update.message.reply_text('Use /set <seconds> to set a timer')
+    update.message.reply_text('Use /unsetall to unset all timers')
+    update.message.reply_text('Use /list to list all timers. Not working, only showing last created timer')
+    update.message.reply_text('Use /respawn to re-spawn the bot. ie. reload the bot''s code')
 
 
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
-def start(bot, update):
-    import sys
-    reply_msg = f"Hi!, i'm {sys.modules[__name__]}"
-    update.message.reply_text(reply_msg)
+def start_command(bot, update):
+    logger.info("command:start")
+    update.message.reply_text(f"Hi!, i'm {_BOT_NAME_} {_VERSION_}")
+    # DONE: Add version number
+    update.message.reply_text(f"I was started at {_BOT_START_DATETIME_}")
+    update.message.reply_text('Use /help to display bot commands')
 
-    update.message.reply_text('Hi! Use /set <seconds> to set a timer')
+    # TODO: Add other methods that the bot supports
+    # TODO: Add help on how to update bot OTA via Telegram
 
 
 def alarm(bot, job):
     """Send the alarm message."""
+    logger.info("callback_alarm: Sending alarm message")
     bot.send_message(job.context, text='Beep!')
 
 
 def set_timer(bot, update, args, job_queue, chat_data):
     """Add a job to the queue."""
+    logger.info("command:set_timer")
     chat_id = update.message.chat_id
     try:
         # args[0] should contain the time for the timer in seconds
@@ -56,17 +214,23 @@ def set_timer(bot, update, args, job_queue, chat_data):
             return
 
         # Add job to queue
-        job = job_queue.run_once(alarm, due, context=chat_id)
+        logger.debug(f"Add job to que, setting due time to {due} seconds")
+        job = job_queue.run_once(alarm, due, context=chat_id, name=f'job_{due}_seconds_from_now')
+        logger.debug("Job added to queue")
         chat_data['job'] = job
 
         update.message.reply_text('Timer successfully set!')
 
     except (IndexError, ValueError):
-        update.message.reply_text('Usage: /set <seconds>')
+        update.message.reply_text("No value specidfed after /set")
+        update.message.reply_text("Setting timer to default 60s seconds")
+        # Calling recursively this same method but this time with a valid args[0] value
+        set_timer(bot, update, [60], job_queue, chat_data)
 
 
-def unset(bot, update, chat_data):
+def unsetall(bot, update, chat_data):
     """Remove the job if the user changed their mind."""
+    logger.info("command:unsetall")
     if 'job' not in chat_data:
         update.message.reply_text('You have no active timer')
         return
@@ -78,6 +242,23 @@ def unset(bot, update, chat_data):
     update.message.reply_text('Timer successfully unset!')
 
 
+def list_timers(bot, update, chat_data):
+    """List all jobs on the queue"""
+    logger.info("command:list_timers")
+    if 'job' not in chat_data:
+        update.message.reply_text('You have no active timers')
+        return
+
+    job = chat_data['job']
+    logger.debug(type(job))
+    logger.debug(job)
+    logger.debug(dir(job))
+    logger.debug(job.interval_seconds)
+    logger.debug(job.interval)
+    logger.debug(job.name)
+    update.message.reply_text('Timers')
+
+
 def error(bot, update, error):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
@@ -85,27 +266,40 @@ def error(bot, update, error):
 
 def main():
     """Run bot."""
+    logger.info("Setting up Telegram bot")
+    logger.info(f'Bot started at datetime({_BOT_START_DATETIME_})')
+    logger.info(f'Bot started at absolute time({_BOT_START_DATETIME_})')
     import sys
     if len(sys.argv) == 1:
         raise EnvironmentError("Telegram Authentication Token not found in environment variable argv[1]")
 
     updater = Updater(sys.argv[1])
-    # updater = Updater("492046823:AAGpcYSpzpvWNRRQYJRA5Ai77aESEvMhnnU")
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
 
+    logger.info("Adding command handlers")
     # on different commands - answer in Telegram
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", start))
+    dp.add_handler(CommandHandler("start", start_command))
+    dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(CommandHandler("status", status_command))
+    dp.add_handler(CommandHandler("host_status", host_status_command))
     dp.add_handler(CommandHandler("set", set_timer,
                                   pass_args=True,
                                   pass_job_queue=True,
                                   pass_chat_data=True))
-    dp.add_handler(CommandHandler("unset", unset, pass_chat_data=True))
+    dp.add_handler(CommandHandler("unsetall", unsetall, pass_chat_data=True))
+    dp.add_handler(CommandHandler("list", list_timers, pass_chat_data=True))
+    dp.add_handler(CommandHandler("respawn", respawn_handler, pass_chat_data=False))
+    dp.add_handler(MessageHandler(Filters.voice, voice_handler))
+    dp.add_handler(MessageHandler(Filters.document, document_handler))
 
     # log all errors
     dp.add_error_handler(error)
+
+    logger.info("Starting the Bot")
+    logger.info(f"This is {_VERSION_}")  # DONE: Add version number from this module, DO NOT hardcode into strings!!!
+    logger.info("This bot can be updated OTA with Telegram")
 
     # Start the Bot
     updater.start_polling()
@@ -114,6 +308,8 @@ def main():
     # SIGABRT. This should be used most of the time, since start_polling() is
     # non-blocking and will stop the bot gracefully.
     updater.idle()
+
+    logger.info("Exiting script, this message should only be seen when shutting down script")
 
 
 if __name__ == '__main__':

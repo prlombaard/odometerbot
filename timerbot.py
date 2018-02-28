@@ -30,7 +30,7 @@ import coloredlogs
 import logging
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-_VERSION_ = "Version 1.2"
+_VERSION_ = "Version 1.3"
 
 _BOT_START_DATETIME_ = datetime.datetime.now()
 _BOT_START_TIME_ = time.time()
@@ -303,6 +303,7 @@ def main():
     logger.info("This bot can be updated OTA with Telegram")
 
     # Start the Bot
+    logger.debug("Bot is starting to poll for messages")
     updater.start_polling()
 
     # Block until you press Ctrl-C or the process receives SIGINT, SIGTERM or

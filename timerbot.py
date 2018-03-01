@@ -30,7 +30,7 @@ from collections import OrderedDict
 import coloredlogs
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-_BOT_VERSION_ = "Version 1.4"
+_BOT_VERSION_ = "Version 1.5"
 
 _BOT_START_DATETIME_ = datetime.datetime.now()
 _BOT_START_TIME_ = time.time()
@@ -40,11 +40,7 @@ _BOT_NAME_ = "Timerbot"
 _SENT_MESSAGES_ = 0
 _RECEIVED_MESSAGES_ = 0
 
-_BOT_SHUTDOWN_DURATION = 3
-
-# TODO: Add status command handler and callback to display bot status
-# TODO: Add os_status command handler and callback to diplay os status in which the bot app is running
-
+_BOT_SHUTDOWN_DURATION = 2
 
 # Create a logger object.
 logger = logging.getLogger(__name__)
@@ -119,6 +115,7 @@ def document_handler(bot, update):
 
 
 def shutdown_command(bot, update):
+    """Shuts down the bot script all the way to the commandline."""
     import time
     import os
     logger.info("command:shutdown:start")
@@ -131,7 +128,7 @@ def shutdown_command(bot, update):
     update.message.reply_text("BYE!!")
 
     os.kill(os.getpid(), 9)  # 9 means SIGKILL
-    logger.info("command:shutdown:end")
+    logger.info("command:shutdown:end")  # NOTE: Should not see this message ever!
 
 
 def status_command(bot, update):
@@ -153,8 +150,7 @@ def status_command(bot, update):
 
 
 def meminfo():
-    """ Return the information in /proc/meminfo
-    as a dictionary """
+    """ Return the information in /proc/meminfo as a dictionary """
     meminfo = OrderedDict()
 
     with open('/proc/meminfo') as f:
@@ -164,6 +160,7 @@ def meminfo():
 
 
 def host_status_command(bot, update):
+    """ Return the information in /proc/cpuinfo and memory"""
     import platform
 
     logger.info("command:host_status:start")
@@ -283,7 +280,10 @@ def error(bot, update, error):
 
 
 def main():
-    """Run bot."""
+    """
+    Main function that initializes the Telegram bot.
+    Expects: Telegram Authentication Token to be passed as an argument to this script
+    """
     logger.info("Setting up Telegram bot")
     logger.info(f'Bot started at datetime({_BOT_START_DATETIME_})')
     logger.info(f'Bot started at absolute time({_BOT_START_TIME_})')

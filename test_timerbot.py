@@ -2,7 +2,7 @@ import pytest
 
 import timerbot
 
-_TEST_VERSION_ = "Version 1.4"  # This version goes together with the timerbot.py version they should be the same
+_TEST_VERSION_ = "Version 1.5"  # This version goes together with the timerbot.py version they should be the same
 
 
 def test_timerbot_main_without_token_parameter_expect_exception():
@@ -33,6 +33,11 @@ def test_meminfo_expected_keys():
     assert 'MemFree' in timerbot.meminfo()
     assert 'MemAvailable' in timerbot.meminfo()
     assert 'Buffers' in timerbot.meminfo()
+
+
+@pytest.mark.skip("Counters not implemented yet")
+def test_send_and_receive_counters():
+    assert 1 == 0
 
 
 @pytest.mark.skip()
